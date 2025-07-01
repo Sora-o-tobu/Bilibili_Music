@@ -7,8 +7,14 @@ import os
 
 def main():
     api = Api()
-    html_path = os.path.abspath(os.path.join(os.path.dirname(__file__), 'frontend', 'index.html'))
-    window = webview.create_window('Bilibili', html_path, js_api=api, width=1000, height=700)
+    html_path = os.path.abspath(os.path.join(os.path.dirname(__file__), 'frontend', 'dist', 'index.html'))
+    window = webview.create_window('Bilibili', html_path, js_api=api, width=1200, height=800)
+
+    def on_loaded():
+        print("DOM is loaded, refreshing music library...")
+        window.evaluate_js('window.refreshMusicLibrary()')
+
+    window.events.loaded += on_loaded
     
     media_thread = threading.Thread(
         target=start_media_server, 

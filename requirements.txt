@@ -1,5 +1,6 @@
 requests
 urllib3
 qrcode
-pywebview
+pywebview[cef]
 mutagen
+flask

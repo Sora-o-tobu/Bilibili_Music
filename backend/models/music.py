@@ -17,11 +17,10 @@ except ImportError:
 class Music:
     """本地音乐文件类"""
     
-    def __init__(self, file_path, title=None, artist=None, album=None, duration=None, 
+    def __init__(self, file_path, title=None, album=None, duration=None, 
                  bv_id=None, download_time=None, pic=None, cover_path=None):
         self.file_path = Path(file_path)
         self.title = title or self.file_path.stem
-        self.artist = artist or "Unknown Artist"
         self.album = album or "Unknown Album"
         self.duration = duration or 0
         self.bv_id = bv_id
@@ -29,6 +28,7 @@ class Music:
         self.pic = pic
         self.cover_path = cover_path
         self.file_size = self.get_file_size()
+        self.cover_url = None # 新增字段
         
     def get_file_size(self):
         """获取文件大小（字节）"""
@@ -61,7 +61,6 @@ class Music:
                     if hasattr(audio_file, 'tags') and audio_file.tags:
                         tags = audio_file.tags
                         self.title = str(tags.get('TIT2', [self.title])[0]) if 'TIT2' in tags else self.title
-                        self.artist = str(tags.get('TPE1', [self.artist])[0]) if 'TPE1' in tags else self.artist
                         self.album = str(tags.get('TALB', [self.album])[0]) if 'TALB' in tags else self.album
         except Exception as e:
             print(f"读取音频元数据失败: {e}")
@@ -79,7 +78,6 @@ class Music:
         return {
             'file_path': str(self.file_path),
             'title': self.title,
-            'artist': self.artist,
             'album': self.album,
             'duration': self.duration,
             'bv_id': self.bv_id,
@@ -88,13 +86,18 @@ class Music:
             'cover_path': self.cover_path
         }
     
+    def to_dict_with_cover_url(self):
+        """导出包含 cover_url 的字典"""
+        data = self.to_dict()
+        data['cover_url'] = self.cover_url
+        return data
+    
     @classmethod
     def from_dict(cls, data):
         """从字典创建Music对象"""
         return cls(
             file_path=data.get('file_path'),
             title=data.get('title'),
-            artist=data.get('artist'),
             album=data.get('album'),
             duration=data.get('duration'),
             bv_id=data.get('bv_id'),

@@ -124,14 +124,14 @@ class DownloadService:
                             cover_path = self.download_cover_image(video.pic, output_dir, filename_base)
                         
                         # 创建音乐对象
-                        music = Music.from_video(video, str(output_path), cover_path)
-                        
-                        # 尝试从视频标题解析 艺术家和专辑
-                        # 注意：这是一个简单的实现，可能不总是准确
-                        parts = video.title.split(' - ')
-                        if len(parts) == 2:
-                            music.artist = parts[0].strip()
-                            music.album = parts[1].strip()
+                        music = Music(
+                            file_path=str(output_path),
+                            title=video.title,
+                            album=video.title, # Use title as a fallback for album
+                            bv_id=video.bvid,
+                            pic=video.pic,
+                            cover_path=cover_path
+                        )
                         
                         # 生成json
                         info_filename = f"{output_path.stem}.json"

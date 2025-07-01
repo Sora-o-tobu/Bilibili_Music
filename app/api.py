@@ -6,6 +6,8 @@ sys.path.insert(0, str(project_root))
 
 from backend.services import AuthService, BilibiliService, DownloadService, MusicService
 from backend.models.video import Video
+from core.config import DOWNLOAD_DIR
+import os
 
 class Api:
     def __init__(self):
@@ -68,7 +70,25 @@ class Api:
     def get_music_library(self, _=None):
         """获取音乐库中的所有音乐信息"""
         music_list = self.music_service.get_all_music()
-        return [music.to_dict() for music in music_list]
+        
+        # 为每个音乐对象添加 cover_url
+        for music in music_list:
+            music.cover_url = self.get_media_url(music.cover_path)
+            
+        return [music.to_dict_with_cover_url() for music in music_list]
+
+    def get_media_url(self, file_path):
+        """将本地媒体文件路径转换为可访问的Flask URL"""
+        if not file_path:
+            return None
+        
+        from pathlib import Path
+        file_path = Path(file_path)
+        # 只获取文件名，因为服务器知道根目录
+        file_name = file_path.name
+        
+        # 返回指向 Flask 路由的 URL
+        return f"http://localhost:8765/media/{file_name}"
 
     def refresh_music_library(self, _=None):
         """刷新音乐库"""
