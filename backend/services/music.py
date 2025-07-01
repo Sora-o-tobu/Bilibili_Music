@@ -1,6 +1,4 @@
-"""
-音乐库管理服务
-"""
+# File: backend/services/music.py
 import os
 import json
 from pathlib import Path

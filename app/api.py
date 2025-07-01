@@ -1,3 +1,5 @@
+# File: app/api.py
+# 为前端提供API接口
 import sys
 from pathlib import Path
 

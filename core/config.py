@@ -1,8 +1,10 @@
+# File: core/config.py
 import os
 from pathlib import Path
 import sys
 
 # 判断程序是否被打包
+# 防止将生成文件存放在 C 盘临时目录中，增加 C 盘负担
 def get_app_path():
     if getattr(sys, 'frozen', False):
         # 如果是打包状态，返回可执行文件所在的目录

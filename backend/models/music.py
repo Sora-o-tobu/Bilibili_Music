@@ -1,6 +1,4 @@
-"""
-音乐文件模型
-"""
+# File: backend/models/music.py
 import os
 import json
 from pathlib import Path

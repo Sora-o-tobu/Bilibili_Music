@@ -1,3 +1,4 @@
+<!-- App.vue，基本由 AI 生成 -->
 <template>
   <el-container style="height: 100vh; background-color: #f4f4f5;">
     <el-header class="header">
