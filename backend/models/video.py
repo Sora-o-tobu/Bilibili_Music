@@ -3,11 +3,13 @@ from core import wbi
 
 class Video:
     """视频类，包含视频的基本信息和下载功能"""
-    def __init__(self, avid=None, bvid=None, cid=None, title=None):
+    def __init__(self, avid=None, bvid=None, cid=None, title=None, pic=None, duration=None):
         self.avid = avid
         self.bvid = bvid
         self.cid = cid
         self.title = title
+        self.pic = pic           # 封面 url
+        self.duration = duration # 视频时长，单位为秒
 
     def __str__(self):
         return f"Video(AV号: {self.avid}, BV号: {self.bvid}, CID: {self.cid}, 标题: {self.title})"
@@ -18,7 +20,9 @@ class Video:
             'avid': self.avid,
             'bvid': self.bvid,
             'cid': self.cid,
-            'title': self.title
+            'title': self.title,
+            'pic': self.pic,
+            'duration': self.duration
         }
     
     @classmethod
@@ -28,7 +32,9 @@ class Video:
             avid=data.get('avid'),
             bvid=data.get('bvid'),
             cid=data.get('cid'),
-            title=data.get('title')
+            title=data.get('title'),
+            pic=data.get('pic'),
+            duration=data.get('duration')
         )
 
     def download_audio(self, session, filename):

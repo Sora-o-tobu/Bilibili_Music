@@ -4,8 +4,6 @@ from core import wbi
 from backend.models.video import Video
 
 class BilibiliService:
-    """B站服务类"""
-    
     def __init__(self, auth_service):
         self.auth_service = auth_service
         self.session = auth_service.session
@@ -31,7 +29,9 @@ class BilibiliService:
                         avid=video_data.get('aid'),
                         bvid=video_data.get('bvid'),
                         cid=video_data.get('cid'),
-                        title=video_data.get('title')
+                        title=video_data.get('title'),
+                        pic=video_data.get('pic'),
+                        duration=video_data.get('duration') / video_data.get('videos')
                     )
                     print(f"视频信息加载成功: {video.title} (AV号: {video.avid}, BV号: {video.bvid}, CID: {video.cid})")
                     return video

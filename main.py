@@ -1,43 +1,23 @@
-from backend.services.auth import AuthService
-from backend.services.bilibili_service import BilibiliService
-from backend.services.download import DownloadService
+import webview
+import threading
+from app.api import Api
+from app.server import start_media_server
+from core.config import DOWNLOAD_DIR
+import os
 
 def main():
-    print("=== Bilibili 音频下载工具 ===")
+    api = Api()
+    html_path = os.path.abspath(os.path.join(os.path.dirname(__file__), 'frontend', 'index.html'))
+    window = webview.create_window('Bilibili', html_path, js_api=api, width=1000, height=700)
     
-    # 初始化服务
-    auth_service = AuthService()
+    media_thread = threading.Thread(
+        target=start_media_server, 
+        args=(DOWNLOAD_DIR, 8765), 
+        daemon=True
+    )
+    media_thread.start()
     
-    # 确保登录
-    if not auth_service.ensure_login():
-        print("登录失败，程序退出")
-        return
-    
-    print("登录成功！")
-    
-    # 初始化其他服务
-    bilibili_service = BilibiliService(auth_service)
-    download_service = DownloadService(auth_service)
-    
-    # 测试下载
-    bv_id = input("请输入BV号: ").strip()
-    if not bv_id:
-        # 测试用默认 BV 号
-        bv_id = "BV1BW411j7mh"
-    
-    # 加载视频信息
-    video = bilibili_service.load_video_info(bv_id)
-    if video:
-        print(f"找到视频: {video}")
-        
-        # 下载音频
-        result = download_service.download_audio(video)
-        if result:
-            print(f"下载成功: {result}")
-        else:
-            print("下载失败")
-    else:
-        print("视频信息加载失败")
+    webview.start()
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     main()

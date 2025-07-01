@@ -2,12 +2,13 @@ import requests
 import time
 import json
 import os
+import qrcode
+import base64
+from io import BytesIO
 from pathlib import Path
 from core.config import DEFAULT_SESSION_FILE, DEFAULT_QRCODE_FILE, BILIBILI_API
 
 class AuthService:
-    """认证服务类"""
-    
     def __init__(self, session_file=None):
         self.session = requests.Session()
         self.session_file = session_file or DEFAULT_SESSION_FILE
@@ -21,7 +22,7 @@ class AuthService:
                 with open(self.session_file, 'r', encoding='utf-8') as f:
                     session_data = json.load(f)
                 
-                # 检查session是否过期(7天)
+                # sessions 过七天需要重新登录
                 if time.time() - session_data.get('timestamp', 0) > 7 * 24 * 3600:
                     print("Session已过期，需要重新登录")
                     return False
@@ -37,7 +38,6 @@ class AuthService:
         return False
     
     def save_session(self):
-        """保存session信息到文件"""
         try:
             cookies_data = []
             for cookie in self.session.cookies:
@@ -65,7 +65,7 @@ class AuthService:
             return False
     
     def check_login_status(self):
-        """检查当前登录状态"""
+        """通过nav接口检查登录状态，成功则返回用户信息，否则返回None"""
         try:
             check_url = f"{BILIBILI_API['base_url']}/x/web-interface/nav"
             headers = {
@@ -79,82 +79,73 @@ class AuthService:
                 if data.get('code') == 0 and data.get('data', {}).get('isLogin'):
                     user_info = data['data']
                     print(f"已登录用户: {user_info.get('uname', 'Unknown')}")
-                    return True
+                    return user_info
             
             print("Session已失效，需要重新登录")
-            return False
+            return None
         except Exception as e:
             print(f"检查登录状态失败: {e}")
-            return False
+            return None
         
-    def apply_qrcode(self):
-        """申请二维码"""
-        apply_url = f"{BILIBILI_API['login_base']}/x/passport-login/web/qrcode/generate"
-        headers = {
-            "User-Agent": BILIBILI_API['user_agent'],
-            "Referer": f"{BILIBILI_API['login_base']}/login"
-        }
-        
-        res = self.session.get(apply_url, headers=headers, timeout=10)
-        if res.status_code != 200:
-            raise Exception("Failed to apply QR code")
-        
-        data = res.json()
-        if data['code'] != 0:
-            raise Exception("Error in QR code application")
-        
-        return data["data"]["qrcode_key"], data["data"]["url"]
-
-    def generate_qrcode(self, url):
-        """生成二维码"""
+    def get_login_qrcode(self):
+        """获取登录二维码及key"""
         try:
-            import qrcode
-            img = qrcode.make(url)
-            img.save(self.qrcode_file)
-            print(f"QR Code generated and saved as {self.qrcode_file}")
-            print("Scan the QR code with the Bilibili app to log in.")
-            return True
-        except ImportError:
-            print("qrcode package not installed. Install it with: pip install qrcode[pil]")
-            print(f"Please scan this URL manually: {url}")
-            return False
-
-    def scan_login(self, qrcode_key):
-        """扫描登录检查"""
-        scan_url = f"{BILIBILI_API['login_base']}/x/passport-login/web/qrcode/poll"
-        headers = {
-            "User-Agent": BILIBILI_API['user_agent'],
-            "Referer": f"{BILIBILI_API['login_base']}/login"
-        }
-        
-        res = self.session.get(scan_url, params={"qrcode_key": qrcode_key}, headers=headers, timeout=10)
-        if res.status_code != 200:
-            raise Exception("Failed to scan QR code")
-        
-        data = res.json()
-        if data['code'] != 0:
-            raise Exception("Error in QR code scanning")
-        
-        status_code = data["data"]["code"]
-        
-        if status_code == 0:  # 扫码登录成功
-            # 获取cookies并保存到session
-            for cookie in res.cookies:
-                self.session.cookies.set(cookie.name, cookie.value, domain=cookie.domain)
+            # 1. 申请二维码
+            apply_url = f"{BILIBILI_API['login_base']}/x/passport-login/web/qrcode/generate"
+            headers = {"User-Agent": BILIBILI_API['user_agent']}
+            res = self.session.get(apply_url, headers=headers, timeout=10)
+            res.raise_for_status()
+            data = res.json()
+            if data['code'] != 0:
+                raise Exception(data.get('message', '申请二维码失败'))
             
-            # 保存session到文件
-            if self.save_session():
-                return 4, "Login successful"
-            else:
-                return -1, "Failed to save session"
-        elif status_code == 86038:  # 二维码失效
-            return 1, "QR code expired"
-        elif status_code == 86090:  # 已扫码未确认
-            return 3, "Scanned, waiting for confirmation"
-        elif status_code == 86101:  # 未扫描
-            return 0, "Not scanned"
-        else:
-            return 0, "Not scanned"
+            qrcode_key = data["data"]["qrcode_key"]
+            url = data["data"]["url"]
+
+            # 2. 生成二维码图片 (Base64)
+            qr_img = qrcode.make(url)
+            buffered = BytesIO()
+            qr_img.save(buffered, format="PNG")
+            img_str = base64.b64encode(buffered.getvalue()).decode('utf-8')
+
+            return {
+                "qrcode_key": qrcode_key,
+                "qrcode_base64": img_str
+            }
+        except Exception as e:
+            print(f"获取登录二维码时发生错误: {e}")
+            return None
+
+    def poll_login_status(self, qrcode_key):
+        """轮询二维码登录状态"""
+        try:
+            poll_url = f"{BILIBILI_API['login_base']}/x/passport-login/web/qrcode/poll"
+            headers = {"User-Agent": BILIBILI_API['user_agent']}
+            params = {"qrcode_key": qrcode_key}
+            
+            res = self.session.get(poll_url, params=params, headers=headers, timeout=10)
+            res.raise_for_status()
+            data = res.json()['data']
+
+            code = data['code']
+            message = data['message']
+            
+            # 登录成功, 保存cookies
+            if code == 0:
+                self.save_session()
+                return {"status": "ok", "message": "登录成功"}
+            # 二维码失效
+            elif code == 86038:
+                return {"status": "expired", "message": message}
+            # 已扫码未确认
+            elif code == 86090:
+                return {"status": "scanned", "message": message}
+            # 未扫描
+            else: # 86101
+                return {"status": "waiting", "message": message}
+        except Exception as e:
+            print(f"轮询登录状态失败: {e}")
+            return {"status": "error", "message": "轮询异常"}
 
     def login_with_qrcode(self, max_attempts=3):
         """使用二维码登录"""
@@ -205,13 +196,14 @@ class AuthService:
         return False
 
     def ensure_login(self):
-        """确保登录状态"""
+        """确保登录状态(主要用于命令行环境)"""
         # 首先检查当前session是否有效
         if self.check_login_status():
             return True
         
         print("需要重新登录...")
-        return self.login_with_qrcode()
+        # 此处省略命令行下的二维码登录逻辑，因为UI版本有自己的实现
+        return False
 
     def logout(self):
         """登出"""

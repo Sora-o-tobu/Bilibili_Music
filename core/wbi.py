@@ -1,3 +1,5 @@
+# File: core/wbi.py
+# wbi 签名
 import requests
 import time
 from functools import reduce
