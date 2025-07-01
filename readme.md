@@ -15,6 +15,14 @@
     - **收藏夹下载**: 可以下载B站收藏夹中的音频。
 - **删除文件**: 可以方便地从音乐库中删除指定的音频文件。
 
+
+
+<p align="center">
+    <img src="images/usage_1.png" width="400" alt="img">
+    <img src="images/usage_2.png" width="400" alt="img">
+</p>
+
+
 ## 🛠️ 技术栈
 
 - **前端**: Vue.js 3 + Element Plus
