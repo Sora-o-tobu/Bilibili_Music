@@ -90,17 +90,53 @@ class MusicService:
             return True
         return False
     
-    def delete_music_file(self, file_path):
-        """删除音乐文件及其记录"""
-        file_path = Path(file_path)
+    def delete_music_file(self, file_path_str):
+        """删除音乐文件及其所有关联文件和记录"""
+        from pathlib import Path
+
+        music = self.get_music_by_path(file_path_str)
+        if not music:
+            # 如果库中没有，也尝试直接删除文件
+            file_to_delete = Path(file_path_str)
+            if file_to_delete.exists():
+                try:
+                    file_to_delete.unlink()
+                    # 尝试删除同名的 .json 和 .jpg
+                    json_path = file_to_delete.with_suffix('.json')
+                    if json_path.exists(): json_path.unlink()
+                    cover_path = file_to_delete.with_suffix('.jpg')
+                    if cover_path.exists(): cover_path.unlink()
+                    return {'status': 'ok', 'message': f'文件 {file_path_str} 已直接删除'}
+                except Exception as e:
+                    return {'status': 'error', 'message': f'直接删除文件时出错: {e}'}
+            return {'status': 'error', 'message': f'音乐 {file_path_str} 不在库中，文件也不存在'}
+
         try:
-            if file_path.exists():
-                file_path.unlink()  # 删除文件
-            self.remove_music(str(file_path))  # 从库中移除
-            return True
+            # 将路径字符串转换为 Path 对象
+            file_path_obj = Path(music.file_path)
+            cover_path_obj = Path(music.cover_path) if music.cover_path else None
+            json_path = file_path_obj.with_suffix('.json')
+
+            # 1. 删除音频文件
+            if file_path_obj.exists():
+                file_path_obj.unlink()
+
+            # 2. 删除封面文件
+            if cover_path_obj and cover_path_obj.exists():
+                cover_path_obj.unlink()
+
+            # 3. 删除元数据 .json 文件
+            if json_path.exists():
+                json_path.unlink()
+
+            # 4. 从音乐库中移除记录
+            self.remove_music(str(music.file_path))
+            
+            return {'status': 'ok', 'message': f'歌曲 {music.title} 已成功删除'}
+
         except Exception as e:
-            print(f"删除文件失败: {e}")
-            return False
+            print(f"删除音乐文件 {file_path_str} 失败: {e}")
+            return {'status': 'error', 'message': f'删除文件时出错: {e}'}
     
     def search_music(self, keyword):
         """搜索音乐"""

@@ -44,6 +44,14 @@ class Api:
         # 后端直接返回字典，前端直接透传
         return self.auth_service.poll_login_status(qrcode_key)
 
+    def get_favorites(self, force_refresh=False):
+        """获取收藏夹，带缓存和强制刷新"""
+        favorites = self.bilibili_service.get_favorites(force_refresh)
+        if favorites is not None:
+            return {'status': 'ok', 'favorites': favorites}
+        else:
+            return {'status': 'error', 'message': '获取收藏夹失败'}
+
     def load_video_info(self, url):
         """加载视频信息"""
         if not url:
@@ -147,7 +155,7 @@ class Api:
                 relative_path = file_path_obj.name
                 # 使用本地HTTP服务器的URL
                 encoded_path = urllib.parse.quote(relative_path)
-                return f"http://localhost:8765/audio/{encoded_path}"
+                return f"http://localhost:8765/media/{encoded_path}"
             else:
                 # 如果文件不在下载目录中，尝试file协议
                 abs_path = os.path.abspath(file_path)

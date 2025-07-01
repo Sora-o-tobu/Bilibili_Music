@@ -1,6 +1,8 @@
 .vscode/
 __pycache__/
 data/
+dist/
+BilibiliMusic.spec
 *.pyc
 *.pyo
 *.pyd

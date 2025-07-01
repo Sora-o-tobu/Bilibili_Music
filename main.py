@@ -11,8 +11,8 @@ def main():
     window = webview.create_window('Bilibili', html_path, js_api=api, width=1200, height=800)
 
     def on_loaded():
-        print("DOM is loaded, refreshing music library...")
-        window.evaluate_js('window.refreshMusicLibrary()')
+        print("DOM is loaded, notifying frontend that pywebview is ready.")
+        window.evaluate_js('window.onPywebviewReady()')
 
     window.events.loaded += on_loaded
     
